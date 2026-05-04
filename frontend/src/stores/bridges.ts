@@ -193,13 +193,33 @@ export const useBridgeStore = defineStore('bridges', () => {
         }
     };
 
-    const createMqttBlasterBridge = async (bridge_id: string, name: string, tx_topic: string, rx_topic: string) => {
+    const createMqttBlasterBridge = async (
+        bridge_id: string,
+        name: string,
+        tx_topic: string,
+        rx_topic: string,
+        learn_topic?: string,
+        learn_command_topic?: string,
+        learn_command_payload?: Record<string, string>,
+        send_payload_key: string = 'ir_code_to_send',
+        learned_code_key: string = 'learned_ir_code'
+    ) => {
         creatingMqttBlasterBridge.value = true;
         try {
             const result = await api<{ status: string; bridge_id: string }>('bridges/mqtt-blaster', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ bridge_id, name, tx_topic, rx_topic })
+                body: JSON.stringify({
+                    bridge_id,
+                    name,
+                    tx_topic,
+                    rx_topic,
+                    learn_topic,
+                    learn_command_topic,
+                    learn_command_payload,
+                    send_payload_key,
+                    learned_code_key
+                })
             });
             if (result && result.status === 'ok' && result.bridge_id) {
                 recentlyCreatedBridges.add(result.bridge_id);

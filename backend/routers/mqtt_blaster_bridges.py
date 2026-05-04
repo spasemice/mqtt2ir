@@ -16,6 +16,11 @@ class CreateMqttBlasterBridgeRequest(BaseModel):
     name: str
     tx_topic: str
     rx_topic: str
+    learn_topic: str | None = None
+    learn_command_topic: str | None = None
+    learn_command_payload: dict[str, Any] | None = None
+    send_payload_key: str = "ir_code_to_send"
+    learned_code_key: str = "learned_ir_code"
     online: bool = True
 
 
@@ -36,6 +41,11 @@ async def create_mqtt_blaster_bridge(
         name=payload.name.strip() or bridge_id,
         tx_topic=payload.tx_topic.strip(),
         rx_topic=payload.rx_topic.strip(),
+        learn_topic=(payload.learn_topic.strip() if payload.learn_topic else None),
+        learn_command_topic=(payload.learn_command_topic.strip() if payload.learn_command_topic else None),
+        learn_command_payload=payload.learn_command_payload or {"learn_ir_code": "ON"},
+        send_payload_key=payload.send_payload_key,
+        learned_code_key=payload.learned_code_key,
         online=payload.online,
     )
 

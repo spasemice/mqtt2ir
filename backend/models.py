@@ -193,6 +193,11 @@ class MqttBlasterBridgeConfig(BaseModel):
     name: str
     tx_topic: str
     rx_topic: str
+    learn_topic: str | None = None
+    learn_command_topic: str | None = None
+    learn_command_payload: dict[str, Any] = Field(default_factory=lambda: {"learn_ir_code": "ON"})
+    send_payload_key: str = "ir_code_to_send"
+    learned_code_key: str = "learned_ir_code"
     online: bool = True
 
 

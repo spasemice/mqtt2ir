@@ -13,17 +13,41 @@ const emit = defineEmits(['close']);
 
 const bridgeId = ref('');
 const name = ref('');
+const baseTopic = ref('');
 const txTopic = ref('');
 const rxTopic = ref('');
+const learnTopic = ref('');
+const learnCommandTopic = ref('');
+const learnCommandPayload = ref('{"learn_ir_code":"ON"}');
 
-const isValid = computed(() => bridgeId.value.trim() && name.value.trim() && txTopic.value.trim() && rxTopic.value.trim());
+const isValid = computed(() =>
+  bridgeId.value.trim() &&
+  name.value.trim() &&
+  txTopic.value.trim() &&
+  rxTopic.value.trim() &&
+  learnTopic.value.trim() &&
+  learnCommandTopic.value.trim()
+);
 
 watch(() => props.show, (v) => {
   if (!v) return;
   bridgeId.value = '';
   name.value = '';
+  baseTopic.value = '';
   txTopic.value = '';
   rxTopic.value = '';
+  learnTopic.value = '';
+  learnCommandTopic.value = '';
+  learnCommandPayload.value = '{"learn_ir_code":"ON"}';
+});
+
+watch(baseTopic, (v) => {
+  const b = v.trim();
+  if (!b) return;
+  txTopic.value = `${b}/set`;
+  rxTopic.value = b;
+  learnTopic.value = `${b}/learned_ir_code`;
+  learnCommandTopic.value = `${b}/set`;
 });
 
 const handleClose = () => emit('close');
@@ -31,7 +55,24 @@ const handleClose = () => emit('close');
 const handleCreate = async () => {
   if (!isValid.value) return;
   try {
-    const res = await bridgeStore.createMqttBlasterBridge(bridgeId.value.trim(), name.value.trim(), txTopic.value.trim(), rxTopic.value.trim());
+    let payloadObj: Record<string, string> = { learn_ir_code: 'ON' };
+    try {
+      payloadObj = JSON.parse(learnCommandPayload.value);
+    } catch {
+      commonStore.addFlashMessage('Learn Command Payload must be valid JSON', 'error');
+      return;
+    }
+    const res = await bridgeStore.createMqttBlasterBridge(
+      bridgeId.value.trim(),
+      name.value.trim(),
+      txTopic.value.trim(),
+      rxTopic.value.trim(),
+      learnTopic.value.trim(),
+      learnCommandTopic.value.trim(),
+      payloadObj,
+      'ir_code_to_send',
+      'learned_ir_code'
+    );
     if (res?.status === 'ok') emit('close');
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Failed to create MQTT blaster gateway';
@@ -60,12 +101,28 @@ const handleCreate = async () => {
           <input v-model="name" type="text" class="w-full rounded px-3 py-2" placeholder="Living Room Blaster">
         </div>
         <div>
-          <label class="block text-sm font-semibold mb-1 text-gray-300">TX Topic (send)</label>
-          <input v-model="txTopic" type="text" class="w-full rounded px-3 py-2" placeholder="zigbee2mqtt/ir_blaster/set/ir_code_to_send">
+          <label class="block text-sm font-semibold mb-1 text-gray-300">Base Topic (Zigbee2MQTT)</label>
+          <input v-model="baseTopic" type="text" class="w-full rounded px-3 py-2" placeholder="zigbee2mqtt/IRZigbee">
         </div>
         <div>
-          <label class="block text-sm font-semibold mb-1 text-gray-300">RX Topic (learn/received)</label>
-          <input v-model="rxTopic" type="text" class="w-full rounded px-3 py-2" placeholder="zigbee2mqtt/ir_blaster">
+          <label class="block text-sm font-semibold mb-1 text-gray-300">TX Topic (send)</label>
+          <input v-model="txTopic" type="text" class="w-full rounded px-3 py-2" placeholder="zigbee2mqtt/IRZigbee/set">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-1 text-gray-300">Status Topic</label>
+          <input v-model="rxTopic" type="text" class="w-full rounded px-3 py-2" placeholder="zigbee2mqtt/IRZigbee">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-1 text-gray-300">Learn Topic</label>
+          <input v-model="learnTopic" type="text" class="w-full rounded px-3 py-2" placeholder="zigbee2mqtt/IRZigbee/learned_ir_code">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-1 text-gray-300">Learn Command Topic</label>
+          <input v-model="learnCommandTopic" type="text" class="w-full rounded px-3 py-2" placeholder="zigbee2mqtt/IRZigbee/set">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-1 text-gray-300">Learn Command Payload (JSON)</label>
+          <input v-model="learnCommandPayload" type="text" class="w-full rounded px-3 py-2" placeholder="{\"learn_ir_code\":\"ON\"}">
         </div>
       </div>
 

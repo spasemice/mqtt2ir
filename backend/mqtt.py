@@ -96,6 +96,18 @@ class MQTTManager(BridgeTransport):
             )
         self._broadcast_bridges()
 
+    def _extract_mqtt_blaster_received_code(self, bridge_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+        cfg = self.mqtt_blaster_bridges.get(bridge_id)
+        if not cfg:
+            return None
+        learned_key = getattr(cfg, "learned_code_key", "learned_ir_code")
+        code_value = payload.get(learned_key)
+        if not code_value:
+            return None
+        if isinstance(code_value, str):
+            return {"protocol": "zigbee2mqtt_raw", "payload": {"code": code_value}}
+        return None
+
     def connect(self):
         try:
             broker = self.settings.mqtt_broker
@@ -172,6 +184,9 @@ class MQTTManager(BridgeTransport):
                 if cfg.rx_topic:
                     client.subscribe(cfg.rx_topic)
                     self.logger.debug("Subscribed to MQTT blaster RX topic: %s", cfg.rx_topic)
+                if cfg.learn_topic and cfg.learn_topic != cfg.rx_topic:
+                    client.subscribe(cfg.learn_topic)
+                    self.logger.debug("Subscribed to MQTT blaster learn topic: %s", cfg.learn_topic)
 
             if self.integration:
                 integration_topics = self.integration.get_subscribe_topics()
@@ -280,15 +295,18 @@ class MQTTManager(BridgeTransport):
 
             if len(topic_parts) < 3 or topic_parts[0] != "ir2mqtt":
                 for bridge_id, cfg in self.mqtt_blaster_bridges.items():
-                    if topic != cfg.rx_topic:
+                    blaster_topics = {cfg.rx_topic}
+                    if cfg.learn_topic:
+                        blaster_topics.add(cfg.learn_topic)
+                    if topic not in blaster_topics:
                         continue
                     try:
                         payload = json.loads(payload_str) if payload_str else {}
                     except json.JSONDecodeError:
-                        self.logger.warning("Invalid JSON on blaster RX topic '%s': %s", topic, payload_str)
-                        return
-                    received_code = payload.get("code") if isinstance(payload.get("code"), dict) else payload
-                    if isinstance(received_code, dict) and received_code.get("protocol"):
+                        # Some integrations publish learned codes as plain text payload.
+                        payload = {"learned_ir_code": payload_str} if payload_str else {}
+                    received_code = self._extract_mqtt_blaster_received_code(bridge_id, payload)
+                    if received_code:
                         self._handle_ir_received(bridge_id, received_code)
                     return
                 return  # Not a topic for us
@@ -626,7 +644,19 @@ class MQTTManager(BridgeTransport):
         cfg = self.mqtt_blaster_bridges.get(bridge_id)
         if cfg and command == "send":
             code = (payload or {}).get("code", {})
-            self.publish(cfg.tx_topic, json.dumps(code))
+            send_key = getattr(cfg, "send_payload_key", "ir_code_to_send")
+            if isinstance(code, dict) and code.get("protocol") == "zigbee2mqtt_raw":
+                raw_code = (code.get("payload") or {}).get("code")
+            else:
+                raw_code = (code.get("payload") or {}).get("code")
+            if not raw_code:
+                raw_code = json.dumps(code)
+            self.publish(cfg.tx_topic, json.dumps({send_key: raw_code}))
+            return {"success": True}
+        if cfg and command == "learn_start":
+            learn_topic = getattr(cfg, "learn_command_topic", None) or cfg.tx_topic
+            learn_payload = getattr(cfg, "learn_command_payload", {"learn_ir_code": "ON"})
+            self.publish(learn_topic, json.dumps(learn_payload))
             return {"success": True}
 
         request_id = str(uuid.uuid4())

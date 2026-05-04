@@ -106,6 +106,7 @@ async def send_irdb_code(
 @router.post("/learn", response_model=StartLearningResponse)
 async def start_learning(
     state: StateManagerDep,
+    mqtt: MQTTManagerDep,
     logger: LoggerDep,
     bridges: list[str] = Query(["any"]),
     smart: bool = Query(False),
@@ -126,6 +127,16 @@ async def start_learning(
         state.learning_type,
         bridges,
     )
+
+    # Trigger learning mode on configured MQTT IR blaster bridges (e.g. Zigbee2MQTT ZS06).
+    targets: list[str]
+    if "any" in bridges:
+        targets = list(mqtt.mqtt_blaster_bridges.keys())
+    else:
+        targets = [b.split(":", 1)[0] for b in bridges if b.split(":", 1)[0] in mqtt.mqtt_blaster_bridges]
+    for bridge_id in set(targets):
+        await mqtt.bridge_manager.send_command(bridge_id, "learn_start", {})
+
     await broadcast_ws(
         {
             "type": "learning_status",
