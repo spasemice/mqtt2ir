@@ -54,6 +54,11 @@ const showTargetSelector = ref(false);
 const { t } = useI18n();
 let sendingTimeout: ReturnType<typeof setTimeout> | null = null;
 
+const compatibleSendBridges = computed(() =>
+  onlineBridges.value.filter(b => b.connection_type !== 'mqtt_blaster')
+);
+const hasCompatibleSendBridges = computed(() => compatibleSendBridges.value.length > 0);
+
 const handleSend = (btn: IRButton, idx: number) => {
     if (sendingButtonIndex.value !== null) {
         return;
@@ -469,7 +474,7 @@ onUnmounted(() => {
                 :class="sendTargets.length > 0 ? 'text-green-400' : (hasOnlineBridges ? 'text-gray-400' : 'text-red-400')"
                 @click="showTargetSelector = !showTargetSelector"
               >
-                <span v-if="sendTargets.length === 0"><i class="mdi mdi-alert-circle-outline mr-0.5" />{{ hasOnlineBridges ? t('irdb.noTargetSelected') : t('learn.noBridges') }}</span>
+                <span v-if="sendTargets.length === 0"><i class="mdi mdi-alert-circle-outline mr-0.5" />{{ hasCompatibleSendBridges ? t('irdb.noTargetSelected') : t('irdb.sendDisabled') }}</span>
                 <span v-else><i class="mdi mdi-upload mr-0.5" />{{ sendTargets.length }} target{{ sendTargets.length > 1 ? 's' : '' }}</span>
                 <i class="mdi mdi-chevron-down ml-1" />
               </button>
@@ -484,9 +489,9 @@ onUnmounted(() => {
                 class="absolute right-0 top-full mt-2 w-96 bg-gray-800 border border-gray-600 rounded-lg shadow-2xl z-50 p-3 text-left"
               >
                 <BridgeSelector
-                  v-if="hasOnlineBridges"
+                  v-if="hasCompatibleSendBridges"
                   v-model="sendTargets"
-                  :bridges="onlineBridges"
+                  :bridges="compatibleSendBridges"
                   type="target"
                   :compact="true"
                 />
@@ -602,7 +607,7 @@ onUnmounted(() => {
                         :class="[`mdi-${btn.icon || 'remote'}`, (hasOnlineBridges && btn.code?.protocol) ? 'group-hover:opacity-0 group-hover:scale-50' : '']"
                       />
                       <button
-                        v-if="hasOnlineBridges && btn.code?.protocol"
+                        v-if="hasCompatibleSendBridges && btn.code?.protocol"
                         class="absolute inset-0 flex items-center justify-center rounded-full transition-all duration-200 opacity-0 scale-50 group-hover:opacity-100 group-hover:scale-100"
                         :class="sendTargets.length > 0
                           ? 'hover:bg-[var(--color-bg-secondary)] text-ha-500'
