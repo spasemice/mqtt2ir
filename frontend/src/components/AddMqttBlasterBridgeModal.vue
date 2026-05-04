@@ -122,7 +122,7 @@ const handleCreate = async () => {
         </div>
         <div>
           <label class="block text-sm font-semibold mb-1 text-gray-300">Learn Command Payload (JSON)</label>
-          <input v-model="learnCommandPayload" type="text" class="w-full rounded px-3 py-2" placeholder="{\"learn_ir_code\":\"ON\"}">
+          <input v-model="learnCommandPayload" type="text" class="w-full rounded px-3 py-2" placeholder='{"learn_ir_code":"ON"}'>
         </div>
       </div>
 
