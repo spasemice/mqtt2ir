@@ -11,6 +11,19 @@ export interface SerialPort {
   hwid: string;
 }
 
+export interface MqttBlasterBridgeConfig {
+    bridge_id: string;
+    name: string;
+    tx_topic: string;
+    rx_topic: string;
+    learn_topic?: string;
+    learn_command_topic?: string;
+    learn_command_payload?: Record<string, string>;
+    send_payload_key?: string;
+    learned_code_key?: string;
+    online?: boolean;
+}
+
 export const useBridgeStore = defineStore('bridges', () => {
     const commonStore = useCommonStore();
     const bridges = ref<Bridge[]>([]);
@@ -231,6 +244,43 @@ export const useBridgeStore = defineStore('bridges', () => {
         }
     };
 
+    const getMqttBlasterBridge = async (bridgeId: string) => {
+        return await api<MqttBlasterBridgeConfig>(`bridges/mqtt-blaster/${bridgeId}`);
+    };
+
+    const updateMqttBlasterBridge = async (
+        bridge_id: string,
+        name: string,
+        tx_topic: string,
+        rx_topic: string,
+        learn_topic?: string,
+        learn_command_topic?: string,
+        learn_command_payload?: Record<string, string>,
+        send_payload_key: string = 'ir_code_to_send',
+        learned_code_key: string = 'learned_ir_code'
+    ) => {
+        creatingMqttBlasterBridge.value = true;
+        try {
+            return await api<{ status: string; bridge_id: string }>(`bridges/mqtt-blaster/${bridge_id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name,
+                    tx_topic,
+                    rx_topic,
+                    learn_topic,
+                    learn_command_topic,
+                    learn_command_payload,
+                    send_payload_key,
+                    learned_code_key,
+                    online: true
+                })
+            });
+        } finally {
+            creatingMqttBlasterBridge.value = false;
+        }
+    };
+
     return {
         bridges,
         pendingProtocols,
@@ -257,6 +307,8 @@ export const useBridgeStore = defineStore('bridges', () => {
         listSerialPorts,
         testSerialConnection,
         createSerialBridge,
-        createMqttBlasterBridge
+        createMqttBlasterBridge,
+        getMqttBlasterBridge,
+        updateMqttBlasterBridge
     };
 });

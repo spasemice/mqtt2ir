@@ -42,6 +42,7 @@ const expandedSettings = reactive(new Set());
 const settingsMap = reactive(new Map<string, BridgeSettings>());
 const showAddSerialBridgeModal = ref(false);
 const showAddMqttBlasterBridgeModal = ref(false);
+const editingMqttBlasterBridgeId = ref<string | null>(null);
 
 const pulsingBridges = reactive(new Map<string, number>());
 
@@ -149,6 +150,11 @@ const formatAbsoluteTime = (ts: number) => {
     if (!ts) return '';
     return new Date(ts * 1000).toLocaleString();
 };
+
+const openMqttBlasterEditor = (bridge: Bridge) => {
+    editingMqttBlasterBridgeId.value = bridge.id;
+    showAddMqttBlasterBridgeModal.value = true;
+};
 </script>
 
 <template>
@@ -210,7 +216,7 @@ const formatAbsoluteTime = (ts: number) => {
                 :class="expandedSettings.has(bridge.id) ? 'text-blue-400' : 'text-gray-500 hover:text-blue-400'"
                 :title="t('bridges.echoSettingsTitle')"
                 data-tour-id="bridge-edit-btn"
-                @click="toggleSettingsPanel(bridge)"
+                @click="bridge.connection_type === 'mqtt_blaster' ? openMqttBlasterEditor(bridge) : toggleSettingsPanel(bridge)"
               >
                 <i class="mdi mdi-cog-outline text-lg" />
               </button>
@@ -496,7 +502,8 @@ const formatAbsoluteTime = (ts: number) => {
     />
     <AddMqttBlasterBridgeModal
       :show="showAddMqttBlasterBridgeModal"
-      @close="showAddMqttBlasterBridgeModal = false"
+      :edit-bridge-id="editingMqttBlasterBridgeId"
+      @close="showAddMqttBlasterBridgeModal = false; editingMqttBlasterBridgeId = null"
     />
 
     <!-- BOTTOM BUTTONS -->
@@ -546,7 +553,7 @@ const formatAbsoluteTime = (ts: number) => {
         <button
           class="flex items-center bg-emerald-600 text-white font-bold rounded-full shadow-lg hover:bg-emerald-700 transition-all duration-300 ease-in-out px-4 py-3"
           title="Add MQTT IR Blaster"
-          @click="showAddMqttBlasterBridgeModal = true"
+          @click="editingMqttBlasterBridgeId = null; showAddMqttBlasterBridgeModal = true"
         >
           <i class="mdi mdi-access-point text-2xl transition-transform duration-300 group-hover:rotate-90" />
           <span class="max-w-0 group-hover:max-w-xs group-hover:ml-3 transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap">Add MQTT IR Blaster</span>

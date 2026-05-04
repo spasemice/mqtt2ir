@@ -8,7 +8,7 @@ const bridgeStore = useBridgeStore();
 const commonStore = useCommonStore();
 const { creatingMqttBlasterBridge } = storeToRefs(bridgeStore);
 
-const props = defineProps<{ show: boolean }>();
+const props = defineProps<{ show: boolean; editBridgeId?: string | null }>();
 const emit = defineEmits(['close']);
 
 const bridgeId = ref('');
@@ -31,7 +31,7 @@ const isValid = computed(() =>
 
 watch(() => props.show, (v) => {
   if (!v) return;
-  bridgeId.value = '';
+  bridgeId.value = props.editBridgeId || '';
   name.value = '';
   baseTopic.value = '';
   txTopic.value = '';
@@ -40,6 +40,27 @@ watch(() => props.show, (v) => {
   learnCommandTopic.value = '';
   learnCommandPayload.value = '{"learn_ir_code":"ON"}';
 });
+
+watch(() => props.editBridgeId, async (id) => {
+  if (!props.show || !id) return;
+  try {
+    const cfg = await bridgeStore.getMqttBlasterBridge(id);
+    bridgeId.value = cfg.bridge_id;
+    name.value = cfg.name || cfg.bridge_id;
+    txTopic.value = cfg.tx_topic || '';
+    rxTopic.value = cfg.rx_topic || '';
+    learnTopic.value = cfg.learn_topic || '';
+    learnCommandTopic.value = cfg.learn_command_topic || '';
+    learnCommandPayload.value = JSON.stringify(cfg.learn_command_payload || { learn_ir_code: 'ON' });
+    if (cfg.rx_topic?.startsWith('zigbee2mqtt/')) {
+      const base = cfg.rx_topic;
+      baseTopic.value = base;
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Failed to load MQTT blaster bridge config';
+    commonStore.addFlashMessage(msg, 'error');
+  }
+}, { immediate: true });
 
 watch(baseTopic, (v) => {
   const b = v.trim();
@@ -62,17 +83,29 @@ const handleCreate = async () => {
       commonStore.addFlashMessage('Learn Command Payload must be valid JSON', 'error');
       return;
     }
-    const res = await bridgeStore.createMqttBlasterBridge(
-      bridgeId.value.trim(),
-      name.value.trim(),
-      txTopic.value.trim(),
-      rxTopic.value.trim(),
-      learnTopic.value.trim(),
-      learnCommandTopic.value.trim(),
-      payloadObj,
-      'ir_code_to_send',
-      'learned_ir_code'
-    );
+    const res = props.editBridgeId
+      ? await bridgeStore.updateMqttBlasterBridge(
+          bridgeId.value.trim(),
+          name.value.trim(),
+          txTopic.value.trim(),
+          rxTopic.value.trim(),
+          learnTopic.value.trim(),
+          learnCommandTopic.value.trim(),
+          payloadObj,
+          'ir_code_to_send',
+          'learned_ir_code'
+        )
+      : await bridgeStore.createMqttBlasterBridge(
+          bridgeId.value.trim(),
+          name.value.trim(),
+          txTopic.value.trim(),
+          rxTopic.value.trim(),
+          learnTopic.value.trim(),
+          learnCommandTopic.value.trim(),
+          payloadObj,
+          'ir_code_to_send',
+          'learned_ir_code'
+        );
     if (res?.status === 'ok') emit('close');
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Failed to create MQTT blaster gateway';
@@ -85,7 +118,7 @@ const handleCreate = async () => {
   <div v-if="show" class="fixed inset-0 !m-0 bg-gray-900/60 flex items-center justify-center z-50 backdrop-blur-sm" @click.self="handleClose">
     <div class="bg-gray-900 rounded-lg shadow-2xl p-6 w-full max-w-md border border-gray-700">
       <div class="flex items-center justify-between mb-6">
-        <h2 class="text-lg font-semibold">Add MQTT IR Blaster</h2>
+        <h2 class="text-lg font-semibold">{{ editBridgeId ? 'Edit MQTT IR Blaster' : 'Add MQTT IR Blaster' }}</h2>
         <button class="text-gray-500 hover:text-gray-300 hover:bg-gray-800 p-1 rounded transition-colors" @click="handleClose">
           <i class="mdi mdi-close text-xl" />
         </button>
@@ -94,7 +127,7 @@ const handleCreate = async () => {
       <div class="space-y-3">
         <div>
           <label class="block text-sm font-semibold mb-1 text-gray-300">Gateway ID</label>
-          <input v-model="bridgeId" type="text" class="w-full rounded px-3 py-2" placeholder="livingroom_blaster">
+          <input v-model="bridgeId" :disabled="!!editBridgeId" type="text" class="w-full rounded px-3 py-2 disabled:opacity-70" placeholder="livingroom_blaster">
         </div>
         <div>
           <label class="block text-sm font-semibold mb-1 text-gray-300">Name</label>
@@ -129,7 +162,7 @@ const handleCreate = async () => {
       <div class="flex gap-2 pt-5">
         <button class="flex-1 btn btn-secondary" :disabled="creatingMqttBlasterBridge" @click="handleClose">Cancel</button>
         <button class="flex-1 btn btn-primary disabled:opacity-50" :disabled="!isValid || creatingMqttBlasterBridge" @click="handleCreate">
-          {{ creatingMqttBlasterBridge ? 'Creating...' : 'Create Gateway' }}
+          {{ creatingMqttBlasterBridge ? (editBridgeId ? 'Saving...' : 'Creating...') : (editBridgeId ? 'Save Changes' : 'Create Gateway') }}
         </button>
       </div>
     </div>
