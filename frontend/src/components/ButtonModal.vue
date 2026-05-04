@@ -69,6 +69,7 @@ watch(() => props.show, (newVal) => {
     const defaults = {
         code: { protocol: '', payload: {}, raw_tolerance: 20 },
         is_output: true,
+        ha_output_entity: 'button',
         is_input: false,
         is_event: true,
         input_mode: 'momentary',
@@ -402,6 +403,21 @@ const isValid = computed(() => !validationError.value);
               </div>
               <Switch v-model="isOutput" />
             </label>
+
+            <div
+              v-if="localButton.is_output"
+              class="bg-gray-900 p-3 rounded border border-gray-700"
+            >
+              <label class="block text-xs font-medium text-gray-300 mb-1">HA Output Entity</label>
+              <select
+                v-model="localButton.ha_output_entity"
+                class="w-full rounded p-2 text-sm bg-gray-900 border-gray-600"
+              >
+                <option value="button">Button</option>
+                <option value="switch">Switch</option>
+                <option value="light">Light</option>
+              </select>
+            </div>
 
             <label class="flex items-center justify-between bg-gray-900 p-3 rounded border border-gray-700 cursor-pointer">
               <div>

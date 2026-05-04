@@ -20,6 +20,7 @@ class IRButton(BaseModel):
     icon: str = "remote"
     code: IRCode | None = None
     is_output: bool = True
+    ha_output_entity: Literal["button", "switch", "light"] = "button"
     is_input: bool = False
     is_event: bool = True
     input_mode: Literal["momentary", "toggle", "timed", "press"] = "momentary"
@@ -32,6 +33,7 @@ class IRButtonCreate(BaseModel):
     icon: str = "remote"
     code: IRCode | None = None
     is_output: bool = True
+    ha_output_entity: Literal["button", "switch", "light"] = "button"
     is_input: bool = False
     is_event: bool = True
     input_mode: Literal["momentary", "toggle", "timed", "press"] = "momentary"

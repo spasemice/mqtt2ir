@@ -16,6 +16,7 @@ export interface IRButton {
   icon?: string;
   code: IRCode | null;
   is_output: boolean;
+  ha_output_entity?: 'button' | 'switch' | 'light';
   is_input: boolean;
   is_event: boolean;
   input_mode?: 'momentary' | 'toggle' | 'timed' | 'press';

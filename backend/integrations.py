@@ -103,6 +103,8 @@ class HomeAssistantIntegration(BaseIntegration):
         # Buttons, binary sensors, and device automations (actions/triggers)
         for btn in device.buttons:
             mqtt_manager.publish(f"homeassistant/button/ir_{device.id}/{btn.id}/config", "", retain=True)
+            mqtt_manager.publish(f"homeassistant/switch/ir_{device.id}/{btn.id}/config", "", retain=True)
+            mqtt_manager.publish(f"homeassistant/light/ir_{device.id}/{btn.id}/config", "", retain=True)
             mqtt_manager.publish(
                 f"homeassistant/binary_sensor/ir_{device.id}/{btn.id}/config",
                 "",

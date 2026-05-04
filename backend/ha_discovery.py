@@ -34,24 +34,61 @@ def send_ha_discovery_for_entities(device: IRDevice, dev_info: dict, mqtt_manage
         else:
             mqtt_manager.publish(config_topic_sensor, "", retain=True)
 
-        # 2. Handle Output (Button)
-        config_topic_btn = f"homeassistant/button/ir_{safe_dev_id}/{btn.id}/config"
+        # 2. Handle Output entity type (button/switch/light)
+        config_topic_button = f"homeassistant/button/ir_{safe_dev_id}/{btn.id}/config"
+        config_topic_switch = f"homeassistant/switch/ir_{safe_dev_id}/{btn.id}/config"
+        config_topic_light = f"homeassistant/light/ir_{safe_dev_id}/{btn.id}/config"
         if btn.is_output:
             command_topic = f"ir2mqtt/cmd/{safe_dev_id}/{btn.id}"
-            payload = {
-                "name": btn.name,
-                "unique_id": f"ir2mqtt_{safe_dev_id}_{btn.id}",
-                "command_topic": command_topic,
-                "payload_press": "PRESS",
-                "device": dev_info,
-            }
-            if btn.icon:
-                payload["icon"] = f"mdi:{btn.icon}"
-
-            mqtt_manager.publish(config_topic_btn, json.dumps(payload), retain=True)
+            entity_type = getattr(btn, "ha_output_entity", "button")
+            if entity_type == "switch":
+                payload = {
+                    "name": btn.name,
+                    "unique_id": f"ir2mqtt_sw_{safe_dev_id}_{btn.id}",
+                    "command_topic": command_topic,
+                    "payload_on": "ON",
+                    "payload_off": "OFF",
+                    "optimistic": True,
+                    "device": dev_info,
+                }
+                if btn.icon:
+                    payload["icon"] = f"mdi:{btn.icon}"
+                mqtt_manager.publish(config_topic_switch, json.dumps(payload), retain=True)
+                mqtt_manager.publish(config_topic_button, "", retain=True)
+                mqtt_manager.publish(config_topic_light, "", retain=True)
+            elif entity_type == "light":
+                payload = {
+                    "name": btn.name,
+                    "unique_id": f"ir2mqtt_light_{safe_dev_id}_{btn.id}",
+                    "command_topic": command_topic,
+                    "payload_on": "ON",
+                    "payload_off": "OFF",
+                    "optimistic": True,
+                    "device": dev_info,
+                }
+                if btn.icon:
+                    payload["icon"] = f"mdi:{btn.icon}"
+                mqtt_manager.publish(config_topic_light, json.dumps(payload), retain=True)
+                mqtt_manager.publish(config_topic_button, "", retain=True)
+                mqtt_manager.publish(config_topic_switch, "", retain=True)
+            else:
+                payload = {
+                    "name": btn.name,
+                    "unique_id": f"ir2mqtt_{safe_dev_id}_{btn.id}",
+                    "command_topic": command_topic,
+                    "payload_press": "PRESS",
+                    "device": dev_info,
+                }
+                if btn.icon:
+                    payload["icon"] = f"mdi:{btn.icon}"
+                mqtt_manager.publish(config_topic_button, json.dumps(payload), retain=True)
+                mqtt_manager.publish(config_topic_switch, "", retain=True)
+                mqtt_manager.publish(config_topic_light, "", retain=True)
             mqtt_manager.subscribe(command_topic)
         else:
-            mqtt_manager.publish(config_topic_btn, "", retain=True)
+            mqtt_manager.publish(config_topic_button, "", retain=True)
+            mqtt_manager.publish(config_topic_switch, "", retain=True)
+            mqtt_manager.publish(config_topic_light, "", retain=True)
 
 
 def send_ha_discovery_for_last_button_sensor(device: IRDevice, dev_info: dict, mqtt_manager: MQTTManager):
