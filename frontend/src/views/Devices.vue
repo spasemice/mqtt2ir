@@ -179,6 +179,23 @@ const canSendToDevice = (dev: Device) => {
     if (!dev.target_bridges || dev.target_bridges.length === 0) return true;
     return dev.target_bridges.some(targetId => onlineBridges.value.some(b => b.id === targetId || b.id === targetId.split(':')[0]));
 };
+
+const getRawLearnedCode = (code: IRCode) => {
+    const payload = code?.payload || {};
+    const raw = payload.code;
+    return typeof raw === 'string' ? raw : '';
+};
+
+const getRawPreview = (raw: string) => {
+    if (!raw) return '';
+    return raw.length > 72 ? `${raw.slice(0, 72)}...` : raw;
+};
+
+const copyRawCode = (code: IRCode) => {
+    const raw = getRawLearnedCode(code);
+    if (!raw) return;
+    copyToClipboard(raw);
+};
 </script>
 <template>
   <div class="space-y-4 pb-20">
@@ -261,6 +278,21 @@ const canSendToDevice = (dev: Device) => {
                   show-protocol
                   class="mt-1"
                 />
+                <div
+                  v-if="getRawLearnedCode(code)"
+                  class="mt-2 p-2 rounded border border-gray-700 bg-gray-900/70"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="text-[10px] uppercase text-gray-500 font-semibold">Raw Preview</span>
+                    <button
+                      class="ml-auto text-[10px] px-2 py-0.5 rounded border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400"
+                      @click.stop="copyRawCode(code)"
+                    >
+                      Copy raw
+                    </button>
+                  </div>
+                  <code class="block mt-1 text-[10px] text-gray-300 break-all">{{ getRawPreview(getRawLearnedCode(code)) }}</code>
+                </div>
                 <div
                   v-if="match"
                   class="mt-1.5 flex items-center gap-1 text-xs text-yellow-400"
