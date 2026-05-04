@@ -3,6 +3,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from
 import { storeToRefs } from 'pinia';
 import Switch from '../components/Switch.vue';
 import AddSerialBridgeModal from '../components/AddSerialBridgeModal.vue';
+import AddMqttBlasterBridgeModal from '../components/AddMqttBlasterBridgeModal.vue';
 import { useBridgeStore } from '../stores/bridges';
 import { useCommonStore } from '../stores/common';
 import IrCodeDetails from '../components/IrCodeDetails.vue';
@@ -40,6 +41,7 @@ const expandedProtocols = reactive(new Set());
 const expandedSettings = reactive(new Set());
 const settingsMap = reactive(new Map<string, BridgeSettings>());
 const showAddSerialBridgeModal = ref(false);
+const showAddMqttBlasterBridgeModal = ref(false);
 
 const pulsingBridges = reactive(new Map<string, number>());
 
@@ -492,6 +494,10 @@ const formatAbsoluteTime = (ts: number) => {
       :show="showAddSerialBridgeModal"
       @close="showAddSerialBridgeModal = false"
     />
+    <AddMqttBlasterBridgeModal
+      :show="showAddMqttBlasterBridgeModal"
+      @close="showAddMqttBlasterBridgeModal = false"
+    />
 
     <!-- BOTTOM BUTTONS -->
     <div class="fixed bottom-6 right-6 z-20 flex items-end gap-3">
@@ -532,6 +538,18 @@ const formatAbsoluteTime = (ts: number) => {
         >
           <i class="mdi mdi-eye-off-outline text-xl" />
           <span class="text-sm font-semibold">{{ visibleIgnoredBridgeIds.length }}</span>
+        </button>
+      </div>
+
+      <!-- Add MQTT Blaster button -->
+      <div class="group">
+        <button
+          class="flex items-center bg-emerald-600 text-white font-bold rounded-full shadow-lg hover:bg-emerald-700 transition-all duration-300 ease-in-out px-4 py-3"
+          title="Add MQTT IR Blaster"
+          @click="showAddMqttBlasterBridgeModal = true"
+        >
+          <i class="mdi mdi-access-point text-2xl transition-transform duration-300 group-hover:rotate-90" />
+          <span class="max-w-0 group-hover:max-w-xs group-hover:ml-3 transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap">Add MQTT IR Blaster</span>
         </button>
       </div>
 

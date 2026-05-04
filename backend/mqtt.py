@@ -36,6 +36,7 @@ class MQTTManager(BridgeTransport):
         # For awaiting command responses
         self.pending_requests: dict[str, asyncio.Event] = {}
         self.pending_responses: dict[str, dict] = {}
+        self.mqtt_blaster_bridges: dict[str, Any] = {}
 
     @property
     def bridges(self):
@@ -73,8 +74,27 @@ class MQTTManager(BridgeTransport):
             await broadcast_ws({"type": "bridges_updated", "bridges": data})
 
         self.bridge_manager.set_loop(loop, broadcast_wrapper)
+        self._load_configured_mqtt_blaster_bridges()
         self.logger.info("Setting up MQTT manager.")
         self.connect()
+
+    def _load_configured_mqtt_blaster_bridges(self):
+        self.mqtt_blaster_bridges = dict(getattr(self.settings, "mqtt_blaster_bridges", {}) or {})
+        for bridge_id, cfg in self.mqtt_blaster_bridges.items():
+            self.bridges.setdefault(bridge_id, {})
+            self.bridges[bridge_id].update(
+                {
+                    "id": bridge_id,
+                    "name": cfg.name,
+                    "online": bool(cfg.online),
+                    "connection_type": "mqtt_blaster",
+                    "network_type": "wifi",
+                    "receivers": [{"id": "ir_rx_main"}],
+                    "transmitters": [{"id": "ir_tx_main"}],
+                    "capabilities": self.bridges[bridge_id].get("capabilities", []),
+                }
+            )
+        self._broadcast_bridges()
 
     def connect(self):
         try:
@@ -148,6 +168,10 @@ class MQTTManager(BridgeTransport):
             for topic in base_topics:
                 client.subscribe(topic)
                 self.logger.debug("Subscribed to topic: %s", topic)
+            for _bridge_id, cfg in self.mqtt_blaster_bridges.items():
+                if cfg.rx_topic:
+                    client.subscribe(cfg.rx_topic)
+                    self.logger.debug("Subscribed to MQTT blaster RX topic: %s", cfg.rx_topic)
 
             if self.integration:
                 integration_topics = self.integration.get_subscribe_topics()
@@ -255,6 +279,18 @@ class MQTTManager(BridgeTransport):
             self.logger.debug("MQTT message received on topic '%s': %s", topic, payload_str)
 
             if len(topic_parts) < 3 or topic_parts[0] != "ir2mqtt":
+                for bridge_id, cfg in self.mqtt_blaster_bridges.items():
+                    if topic != cfg.rx_topic:
+                        continue
+                    try:
+                        payload = json.loads(payload_str) if payload_str else {}
+                    except json.JSONDecodeError:
+                        self.logger.warning("Invalid JSON on blaster RX topic '%s': %s", topic, payload_str)
+                        return
+                    received_code = payload.get("code") if isinstance(payload.get("code"), dict) else payload
+                    if isinstance(received_code, dict) and received_code.get("protocol"):
+                        self._handle_ir_received(bridge_id, received_code)
+                    return
                 return  # Not a topic for us
 
             # Delegate to integration first
@@ -586,6 +622,12 @@ class MQTTManager(BridgeTransport):
         if not self.connected:
             self.logger.warning("Cannot send command, MQTT is not connected.")
             return None
+
+        cfg = self.mqtt_blaster_bridges.get(bridge_id)
+        if cfg and command == "send":
+            code = (payload or {}).get("code", {})
+            self.publish(cfg.tx_topic, json.dumps(code))
+            return {"success": True}
 
         request_id = str(uuid.uuid4())
         command_payload = {

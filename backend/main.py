@@ -22,6 +22,7 @@ from .routers import (
     devices,
     diagnostics,
     irdb,
+    mqtt_blaster_bridges,
     serial_bridges,
 )
 from .routers import (
@@ -146,6 +147,7 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(devices.router)
 app.include_router(bridges.router)
 app.include_router(serial_bridges.router)
+app.include_router(mqtt_blaster_bridges.router)
 app.include_router(automations.router)
 app.include_router(settings_router.router)
 app.include_router(irdb.router)

@@ -23,6 +23,7 @@ export const useBridgeStore = defineStore('bridges', () => {
     const loadingSerialPorts = ref(false);
     const testingSerialConnection = ref(false);
     const creatingSerialBridge = ref(false);
+    const creatingMqttBlasterBridge = ref(false);
     
     let initialBridgesLoaded = false;
     const bridgeStatusTimers = new Map<string, number>();
@@ -63,6 +64,7 @@ export const useBridgeStore = defineStore('bridges', () => {
         const displayName = bridge ? bridge.name : id;
 
         const isSerial = bridge?.connection_type === 'serial';
+        const isMqttBlaster = bridge?.connection_type === 'mqtt_blaster';
         const confirmMsg = isSerial 
             ? t('store.deleteSerialBridgeConfirm', { name: displayName })
             : t('store.deleteBridgeConfirm', { name: displayName });
@@ -70,7 +72,7 @@ export const useBridgeStore = defineStore('bridges', () => {
         if (await commonStore.askConfirm(t('store.deleteBridgeTitle'), confirmMsg, 'danger', t('confirm.confirm'), event)) {
             recentlyDeletedBridges.add(id);
             try {
-                const endpoint = isSerial ? `bridges/serial/${id}` : `bridges/${id}`;
+                const endpoint = isSerial ? `bridges/serial/${id}` : isMqttBlaster ? `bridges/mqtt-blaster/${id}` : `bridges/${id}`;
                 await api(endpoint, { method: 'DELETE' });
                 commonStore.addFlashMessage(t('store.bridgeDeleted', { name: displayName }), 'success');
                 setTimeout(() => recentlyDeletedBridges.delete(id), 5000);
@@ -191,6 +193,24 @@ export const useBridgeStore = defineStore('bridges', () => {
         }
     };
 
+    const createMqttBlasterBridge = async (bridge_id: string, name: string, tx_topic: string, rx_topic: string) => {
+        creatingMqttBlasterBridge.value = true;
+        try {
+            const result = await api<{ status: string; bridge_id: string }>('bridges/mqtt-blaster', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bridge_id, name, tx_topic, rx_topic })
+            });
+            if (result && result.status === 'ok' && result.bridge_id) {
+                recentlyCreatedBridges.add(result.bridge_id);
+                setTimeout(() => recentlyCreatedBridges.delete(result.bridge_id), 5000);
+            }
+            return result;
+        } finally {
+            creatingMqttBlasterBridge.value = false;
+        }
+    };
+
     return {
         bridges,
         pendingProtocols,
@@ -213,8 +233,10 @@ export const useBridgeStore = defineStore('bridges', () => {
         loadingSerialPorts,
         testingSerialConnection,
         creatingSerialBridge,
+        creatingMqttBlasterBridge,
         listSerialPorts,
         testSerialConnection,
-        createSerialBridge
+        createSerialBridge,
+        createMqttBlasterBridge
     };
 });

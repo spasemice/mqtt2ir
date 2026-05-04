@@ -92,7 +92,7 @@ export interface Bridge {
   id: string;
   name: string;
   status: 'online' | 'offline' | 'connecting';
-  connection_type?: 'mqtt' | 'serial';
+  connection_type?: 'mqtt' | 'serial' | 'mqtt_blaster';
   network_type?: 'wifi' | 'ethernet';
   ip?: string;
   serial_port?: string;

@@ -189,6 +189,13 @@ class SerialBridgeConfig(BaseModel):
     baudrate: int = 115200
 
 
+class MqttBlasterBridgeConfig(BaseModel):
+    name: str
+    tx_topic: str
+    rx_topic: str
+    online: bool = True
+
+
 class ReceiverConfig(BaseModel):
     id: str
 

@@ -1,0 +1,77 @@
+from typing import Any
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+
+from ..dependencies import LoggerDep, MQTTManagerDep, SettingsDep
+from ..models import MqttBlasterBridgeConfig
+from ..utils import update_options_file
+from ..websockets import broadcast_ws
+
+router = APIRouter(prefix="/api/bridges/mqtt-blaster", tags=["mqtt-blaster-bridges"])
+
+
+class CreateMqttBlasterBridgeRequest(BaseModel):
+    bridge_id: str
+    name: str
+    tx_topic: str
+    rx_topic: str
+    online: bool = True
+
+
+@router.post("", response_model=dict[str, Any])
+async def create_mqtt_blaster_bridge(
+    payload: CreateMqttBlasterBridgeRequest,
+    mqtt: MQTTManagerDep,
+    settings: SettingsDep,
+    logger: LoggerDep,
+):
+    bridge_id = payload.bridge_id.strip()
+    if not bridge_id:
+        raise HTTPException(400, "bridge_id is required")
+    if bridge_id in settings.mqtt_blaster_bridges or bridge_id in mqtt.bridges:
+        raise HTTPException(409, f"Bridge '{bridge_id}' already exists")
+
+    settings.mqtt_blaster_bridges[bridge_id] = MqttBlasterBridgeConfig(
+        name=payload.name.strip() or bridge_id,
+        tx_topic=payload.tx_topic.strip(),
+        rx_topic=payload.rx_topic.strip(),
+        online=payload.online,
+    )
+
+    update_options_file(
+        settings.options_file,
+        {"mqtt_blaster_bridges": {k: v.model_dump() for k, v in settings.mqtt_blaster_bridges.items()}},
+    )
+    mqtt._load_configured_mqtt_blaster_bridges()
+    if mqtt.client and mqtt.connected:
+        mqtt.subscribe(payload.rx_topic.strip())
+
+    logger.info("Created MQTT blaster bridge '%s' (tx=%s, rx=%s)", bridge_id, payload.tx_topic, payload.rx_topic)
+    await broadcast_ws({"type": "bridges_updated", "bridges": mqtt._get_bridges_list_for_broadcast()})
+    return {"status": "ok", "bridge_id": bridge_id}
+
+
+@router.delete("/{bridge_id:path}", response_model=dict[str, Any])
+async def delete_mqtt_blaster_bridge(
+    bridge_id: str,
+    mqtt: MQTTManagerDep,
+    settings: SettingsDep,
+    logger: LoggerDep,
+):
+    if bridge_id not in settings.mqtt_blaster_bridges:
+        raise HTTPException(404, "MQTT blaster bridge not found")
+
+    cfg = settings.mqtt_blaster_bridges.pop(bridge_id)
+    if mqtt.client and mqtt.connected and cfg.rx_topic:
+        mqtt.unsubscribe(cfg.rx_topic)
+
+    mqtt.bridges.pop(bridge_id, None)
+
+    update_options_file(
+        settings.options_file,
+        {"mqtt_blaster_bridges": {k: v.model_dump() for k, v in settings.mqtt_blaster_bridges.items()}},
+    )
+    logger.info("Deleted MQTT blaster bridge '%s'", bridge_id)
+    await broadcast_ws({"type": "bridges_updated", "bridges": mqtt._get_bridges_list_for_broadcast()})
+    return {"status": "ok"}

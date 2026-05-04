@@ -10,7 +10,7 @@ import yaml
 from pydantic import Field
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
-from .models import BridgeSettings, SerialBridgeConfig
+from .models import BridgeSettings, MqttBlasterBridgeConfig, SerialBridgeConfig
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     echo_suppression_ms: int = 500
     bridge_settings: dict[str, BridgeSettings] = Field(default_factory=dict)
     serial_bridges: dict[str, SerialBridgeConfig] = Field(default_factory=dict)
+    mqtt_blaster_bridges: dict[str, MqttBlasterBridgeConfig] = Field(default_factory=dict)
     ignored_bridges: list[str] = Field(default_factory=list)
     log_level: str = "INFO"
 
