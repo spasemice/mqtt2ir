@@ -172,7 +172,7 @@ class HomeAssistantIntegration(BaseIntegration):
         topic = f"ir2mqtt/status/{device.id}/last_button"
         payload = button.name
         logger.debug("[HA Integration] Publishing last_button event to '%s': %s", topic, payload)
-        mqtt_manager.publish(topic, payload)
+        mqtt_manager.publish(topic, payload, retain=True)
 
         # For device automations (triggers)
         if button.is_event:
@@ -189,7 +189,7 @@ class HomeAssistantIntegration(BaseIntegration):
         # For binary_sensor state
         topic = f"ir2mqtt/input/{device.id}/{button.id}/state"
         logger.debug("[HA Integration] Publishing input state to '%s': %s", topic, state)
-        mqtt_manager.publish(topic, state)
+        mqtt_manager.publish(topic, state, retain=True)
 
     def publish_automation_event(self, automation: IRAutomation, event_name: str, run_id: str, mqtt_manager):
         safe_event_name = sanitize_topic_part(event_name)
@@ -365,7 +365,7 @@ class StandaloneIntegration(BaseIntegration):
         # Publish last button pressed
         last_btn_topic = f"ir2mqtt/devices/{dev_part}/last_button"
         logger.debug("[Standalone] Publishing to '%s': %s", last_btn_topic, button.name)
-        mqtt_manager.publish(last_btn_topic, button.name)
+        mqtt_manager.publish(last_btn_topic, button.name, retain=True)
 
         # Publish specific event if enabled
         if button.is_event:
@@ -379,7 +379,7 @@ class StandaloneIntegration(BaseIntegration):
         btn_part = button.id if topic_style == "id" else sanitize_topic_part(button.name)
         topic = f"ir2mqtt/devices/{dev_part}/{btn_part}/out"
         logger.debug("[Standalone] Publishing to '%s': %s", topic, state)
-        mqtt_manager.publish(topic, state)
+        mqtt_manager.publish(topic, state, retain=True)
 
     def publish_automation_event(self, automation: IRAutomation, event_name: str, run_id: str, mqtt_manager):
         topic_style = self.settings.topic_style if self.settings else "name"

@@ -434,6 +434,9 @@ const isValid = computed(() => !validationError.value);
                 <option value="toggle">
                   {{ t('devices.button.modeToggle') }}
                 </option>
+                <option value="press">
+                  Press
+                </option>
                 <option value="timed">
                   {{ t('devices.button.modeTimed') }}
                 </option>
@@ -506,6 +509,9 @@ const isValid = computed(() => !validationError.value);
                 </option>
                 <option value="toggle">
                   {{ t('devices.button.modeToggle') }}
+                </option>
+                <option value="press">
+                  Press
                 </option>
                 <option value="timed">
                   {{ t('devices.button.modeTimed') }}

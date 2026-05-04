@@ -588,6 +588,16 @@ class MQTTManager(BridgeTransport):
                                         "ON" if new_state else "OFF",
                                         self,
                                     )
+                            elif input_mode == "press":
+                                # Publish a short ON/OFF pulse so every press is reflected.
+                                if self.integration:
+                                    self.integration.publish_input_state(dev, btn, "ON", self)
+                                if self.loop and self.loop.is_running():
+                                    async def _press_off():
+                                        await asyncio.sleep(0.2)
+                                        if self.integration:
+                                            self.integration.publish_input_state(dev, btn, "OFF", self)
+                                    asyncio.run_coroutine_threadsafe(_press_off(), self.loop)
                             else:  # momentary
                                 if self.integration:
                                     self.integration.publish_input_state(dev, btn, "ON", self)

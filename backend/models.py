@@ -22,7 +22,7 @@ class IRButton(BaseModel):
     is_output: bool = True
     is_input: bool = False
     is_event: bool = True
-    input_mode: str = "momentary"
+    input_mode: Literal["momentary", "toggle", "timed", "press"] = "momentary"
     input_off_delay_s: int = 1
     ordering: int = 0
 
@@ -34,7 +34,7 @@ class IRButtonCreate(BaseModel):
     is_output: bool = True
     is_input: bool = False
     is_event: bool = True
-    input_mode: str = "momentary"
+    input_mode: Literal["momentary", "toggle", "timed", "press"] = "momentary"
     input_off_delay_s: int = 1
 
     @field_validator("icon")

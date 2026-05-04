@@ -18,7 +18,7 @@ export interface IRButton {
   is_output: boolean;
   is_input: boolean;
   is_event: boolean;
-  input_mode?: 'momentary' | 'toggle' | 'timed';
+  input_mode?: 'momentary' | 'toggle' | 'timed' | 'press';
   input_off_delay_s?: number;
   ordering?: number;
 }
